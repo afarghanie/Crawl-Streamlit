@@ -17,18 +17,22 @@ if sys.platform == "win32":
 st.set_page_config(layout="wide", page_title="Dynamic AI Web Crawler")
 
 # --- Default Values (for user convenience) ---
-DEFAULT_URL = "https://www.oto.com/mobil-bekas/jakarta-pusat"
-DEFAULT_SELECTOR = "[class^='card splide__slide shadow-light']"
-DEFAULT_KEYS = "nama, harga, tahun, transmisi, jarak_tempuh, lokasi"
+DEFAULT_URL = "https://www.lamudi.co.id/jual/?q=jakarta"
+DEFAULT_SELECTOR = "[class*='ListingCell'], [class*='PropertyCard'], [class*='listing-item']"
+DEFAULT_KEYS = "title, harga, deskripsi, lokasi, jenis_properti, jumlah_tempat_tidur, jumlah_kamar_mandi, luas_properti_m2"
 DEFAULT_PROMPT = """
-You are an expert data extraction AI. Based on the provided HTML snippet of a used car listing, extract the following pieces of information. Ensure the data is clean and accurate. If a piece of information is not present, leave it as null.
+You are an expert data extraction AI. Based on the provided HTML snippet of a property listing, extract the following pieces of information. Ensure the data is clean and accurate. If a piece of information is not present, leave it as null.
 
-- **nama**: The full name or title of the car model.
-- **harga**: The price of the car, formatted as a string (e.g., "Rp 250 Juta").
-- **tahun**: The manufacturing year of the car.
-- **transmisi**: The type of transmission (e.g., "Otomatis", "Manual").
-- **jarak_tempuh**: The mileage of the car (e.g., "10.000-15.000 km").
-- **lokasi**: The city or general location of the car dealership.
+- **title**: The full title or name of the property listing.
+- **harga**: The price of the property, formatted as a string (e.g., "Rp 2,5 Miliar", "Rp 500 Juta").
+- **deskripsi**: The detailed description of the property.
+- **lokasi**: The specific location or address of the property (e.g., "Jakarta Selatan", "Surabaya Pusat").
+- **jenis_properti**: The type of property (e.g., "Apartemen", "Rumah", "Tanah", "Ruko").
+- **jumlah_tempat_tidur**: The number of bedrooms in the property, as an integer.
+- **jumlah_kamar_mandi**: The number of bathrooms in the property, as an integer.
+- **luas_properti_m2**: The area of the property in square meters, as a numeric value.
+
+Extract all available information from the HTML. If any field is not found, set it to null. For numeric fields, extract only the numbers without units.
 """
 
 # --- UI Definition ---

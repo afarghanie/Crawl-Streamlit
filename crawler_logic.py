@@ -14,8 +14,8 @@ def get_browser_config() -> BrowserConfig:
     """Returns the browser configuration for the crawler."""
     return BrowserConfig(
         browser_type="chromium",
-        headless=True,  # Changed to headless for server deployment
-        verbose=True,
+        headless=False,  # Changed to non-headless to help with dynamic content
+        verbose=True
     )
 
 async def check_no_results(
@@ -94,13 +94,23 @@ async def crawl_venues(
             url = f"{base_url}?page={page_number}"
             progress_callback(f"Processing page {page_number}...")
 
-            # Check for "No Results Found"
-            no_results = await check_no_results(crawler, url, session_id)
-            if no_results:
-                progress_callback("No more results found. Ending crawl.")
+            # First, load the page without extraction to let dynamic content load
+            initial_result = await crawler.arun(
+                url=url,
+                config=CrawlerRunConfig(
+                    cache_mode=CacheMode.BYPASS,
+                    session_id=session_id,
+                ),
+            )
+
+            if not initial_result.success:
+                progress_callback(f"Failed to load page {page_number}")
                 break
 
-            # Fetch page content with extraction strategy
+            # Add a small delay to allow dynamic content to load
+            await asyncio.sleep(5)
+
+            # Now fetch with extraction strategy
             result = await crawler.arun(
                 url=url,
                 config=CrawlerRunConfig(
