@@ -1,0 +1,6 @@
+Crawl4AI==0.4.247
+python-dotenv==1.0.1
+pydantic==2.10.6
+streamlit==1.32.0
+pandas==2.2.0
+nest_asyncio==1.6.0
