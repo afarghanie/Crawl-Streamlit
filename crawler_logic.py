@@ -44,6 +44,8 @@ async def crawl_venues(
     system_prompt: str,
     required_keys_str: str,
     progress_callback: Callable[[str], None],
+    use_page_limit: bool = False,
+    max_pages: int = None,
 ) -> List[Dict[str, Any]]:
     """
     Main function to crawl venue data with dynamic configuration.
@@ -55,6 +57,8 @@ async def crawl_venues(
         system_prompt: System prompt for the LLM
         required_keys_str: Comma-separated string of required data fields
         progress_callback: Function to call for progress updates
+        use_page_limit: Whether to limit the number of pages crawled
+        max_pages: Maximum number of pages to crawl (ignored if use_page_limit is False)
     
     Returns:
         List of extracted venue data dictionaries
@@ -87,10 +91,21 @@ async def crawl_venues(
     seen_ids = set()
     
     progress_callback("Starting the crawling process...")
+    
+    # Set page limit message
+    if use_page_limit and max_pages:
+        progress_callback(f"Page limit set: Will crawl maximum {max_pages} pages")
+    else:
+        progress_callback("No page limit: Will crawl until no more data is available")
 
     # Start the web crawler context
     async with AsyncWebCrawler(config=browser_config) as crawler:
         while True:
+            # Check page limit
+            if use_page_limit and max_pages and page_number > max_pages:
+                progress_callback(f"Reached page limit ({max_pages} pages). Stopping crawl.")
+                break
+                
             url = f"{base_url}?page={page_number}"
             progress_callback(f"Processing page {page_number}...")
 
@@ -161,5 +176,5 @@ async def crawl_venues(
             page_number += 1
             await asyncio.sleep(2)  # Polite delay between requests
 
-    progress_callback(f"Crawling complete! Total venues extracted: {len(all_venues)}")
+    progress_callback(f"Crawling complete! Total venues extracted: {len(all_venues)} from {page_number - 1} pages")
     return all_venues 

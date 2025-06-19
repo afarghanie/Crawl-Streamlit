@@ -47,6 +47,18 @@ with st.sidebar:
     base_url = st.text_input("Target URL", value=DEFAULT_URL)
     css_selector = st.text_input("CSS Selector for Items", value=DEFAULT_SELECTOR)
     api_key = st.text_input("Your Google API Key", type="password")
+    
+    # Page limit configuration
+    st.divider()
+    st.subheader("📄 Page Configuration")
+    use_page_limit = st.checkbox("Set maximum pages to crawl", value=False, help="Enable to limit the number of pages crawled")
+    max_pages = st.number_input(
+        "Maximum pages to crawl",
+        min_value=1,
+        max_value=100,
+        value=10,
+        help="Set to 0 or disable checkbox to crawl until no more data is available"
+    ) if use_page_limit else None
 
     st.divider()
 
@@ -104,7 +116,9 @@ if start_button:
                         api_key=api_key,
                         system_prompt=system_prompt_input,
                         required_keys_str=required_keys_input,
-                        progress_callback=log_callback
+                        progress_callback=log_callback,
+                        use_page_limit=use_page_limit,
+                        max_pages=max_pages
                     ))
                 finally:
                     loop.close()
