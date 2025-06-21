@@ -9,6 +9,7 @@ from crawl4ai import (
     CrawlerRunConfig,
     LLMExtractionStrategy,
 )
+from utils.llm_provider_manager import LLMProviderManager
 
 def get_browser_config() -> BrowserConfig:
     """Returns the browser configuration for the crawler."""
@@ -46,6 +47,8 @@ async def crawl_venues(
     progress_callback: Callable[[str], None],
     use_page_limit: bool = False,
     max_pages: int = None,
+    llm_provider: str = "gemini",
+    llm_model: str = "gemini-2.5-flash",
 ) -> List[Dict[str, Any]]:
     """
     Main function to crawl venue data with dynamic configuration.
@@ -53,16 +56,29 @@ async def crawl_venues(
     Args:
         base_url: The base URL to crawl
         css_selector: CSS selector for targeting venue elements
-        api_key: Google API key for the LLM
+        api_key: API key for the LLM provider
         system_prompt: System prompt for the LLM
         required_keys_str: Comma-separated string of required data fields
         progress_callback: Function to call for progress updates
         use_page_limit: Whether to limit the number of pages crawled
         max_pages: Maximum number of pages to crawl (ignored if use_page_limit is False)
+        llm_provider: LLM provider key (e.g., 'openai', 'gemini', 'deepseek')
+        llm_model: LLM model key (e.g., 'gpt-4o', 'gemini-2.5-flash')
     
     Returns:
         List of extracted venue data dictionaries
     """
+    # Initialize LLM provider manager
+    provider_manager = LLMProviderManager()
+    
+    # Create the provider string for Crawl4AI
+    try:
+        provider_string = provider_manager.create_provider_string(llm_provider, llm_model)
+        progress_callback(f"Using LLM: {provider_string}")
+    except ValueError as e:
+        progress_callback(f"Error with LLM configuration: {e}")
+        return []
+    
     # Convert the comma-separated string of keys into a clean list
     keys_list = [key.strip() for key in required_keys_str.split(',') if key.strip()]
     
@@ -75,7 +91,7 @@ async def crawl_venues(
     # Initialize configurations
     browser_config = get_browser_config()
     llm_strategy = LLMExtractionStrategy(
-        provider="gemini/gemini-2.5-flash-preview-05-20",
+        provider=provider_string,
         api_token=api_key,
         schema=DynamicDataModel.model_json_schema(),
         extraction_type="schema",
