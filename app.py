@@ -6,6 +6,7 @@ import nest_asyncio
 import threading
 from crawler_logic import crawl_venues
 from utils.llm_provider_manager import LLMProviderManager
+from utils.selector_utils import generate_flexible_selector_with_ai
 from config import DEFAULT_LLM_PROVIDER, DEFAULT_LLM_MODEL
 
 # Fix for Windows asyncio subprocess issue
@@ -52,13 +53,7 @@ You can customize the target website, data extraction rules, and AI behavior all
 """)
 
 with st.sidebar:
-    st.header("⚙️ Crawler Configuration")
-    base_url = st.text_input("Target URL", value=DEFAULT_URL)
-    css_selector = st.text_input("CSS Selector for Items", value=DEFAULT_SELECTOR)
-    
-    st.divider()
-    
-    # LLM Provider Selection
+    # --- LLM Provider Configuration ---
     st.header("🤖 LLM Provider Configuration")
     
     # Provider selection
@@ -71,12 +66,14 @@ with st.sidebar:
         help="Select which LLM provider to use for data extraction"
     )
     
-    # Model selection based on provider
+    # Model and API key initialization
+    selected_model = None
+    api_key = None
+
     if selected_provider:
         provider_info = provider_manager.get_provider_info(selected_provider)
         model_options = provider_info["models"]
         
-        # Create a formatted display for models with cost info
         def format_model_option(model_key):
             model_name = model_options[model_key]
             cost_info = provider_manager.get_cost_info(selected_provider, model_key)
@@ -90,23 +87,44 @@ with st.sidebar:
             help="Select which model to use. Consider cost and performance trade-offs."
         )
         
-        # API Key input
         api_key = st.text_input(
             provider_info["api_key_name"],
             type="password",
             help=provider_info["help_text"]
         )
         
-        # Display provider info
-        st.info(f"**Selected:** {provider_info['name']} - {model_options[selected_model]}")
-        
-        # Display cost information
-        cost_info = provider_manager.get_cost_info(selected_provider, selected_model)
-        st.caption(f"💡 **Cost:** {cost_info}")
+        if selected_model:
+            st.info(f"**Selected:** {provider_info['name']} - {model_options[selected_model]}")
+            cost_info = provider_manager.get_cost_info(selected_provider, selected_model)
+            st.caption(f"💡 **Cost:** {cost_info}")
+
+    st.divider()
+
+    # --- Crawler Configuration ---
+    st.header("⚙️ Crawler Configuration")
+    base_url = st.text_input("Target URL", value=DEFAULT_URL)
+    raw_css_selector = st.text_input("CSS Selector for Items", value=DEFAULT_SELECTOR, help="Enter a CSS selector. Use the checkbox below to generate a flexible version with AI.")
+    
+    make_flexible = st.checkbox("Make Selector Flexible (AI)", value=True, help="Use the selected LLM to automatically convert the selector to a more flexible format.")
+
+    css_selector = raw_css_selector
+    if make_flexible:
+        # Define a cached version of the AI function to prevent redundant API calls
+        @st.cache_data
+        def get_cached_flexible_selector(selector, provider, model, key_hash):
+            return generate_flexible_selector_with_ai(selector, api_key, provider, model)
+
+        if api_key and selected_provider and selected_model and raw_css_selector:
+            with st.spinner("✨ Generating flexible selector with AI..."):
+                # Use a hash of the key for caching to avoid storing the raw key
+                css_selector = get_cached_flexible_selector(raw_css_selector, selected_provider, selected_model, hash(api_key))
+            st.info(f"**AI-Generated Selector:** `{css_selector}`")
+        else:
+            st.warning("Please provide an API key above to enable AI-powered selector generation.")
     
     st.divider()
     
-    # Page limit configuration
+    # --- Page limit configuration ---
     st.subheader("📄 Page Configuration")
     use_page_limit = st.checkbox("Set maximum pages to crawl", value=False, help="Enable to limit the number of pages crawled")
     max_pages = st.number_input(
